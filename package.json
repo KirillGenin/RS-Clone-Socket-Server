@@ -2,10 +2,10 @@
   "name": "rs-clone-server-socket",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.ts",
+    "start": "node index.ts",
   },
   "keywords": [],
   "author": "",
