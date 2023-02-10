@@ -2,6 +2,7 @@
   "name": "rs-clone-server-socket",
   "version": "1.0.0",
   "description": "",
+  "module": "commonjs",
   "main": "index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
