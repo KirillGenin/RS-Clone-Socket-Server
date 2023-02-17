@@ -23,21 +23,19 @@ server.listen(PORT, () => {
 ;
 const rooms = {};
 const playersInfo = {};
+let userName = 'Аноним';
 io.on('connection', (socket) => {
     console.log(`a new user connected, ID: ${socket.id}`);
-    const listAllRooms = Object.keys(rooms)
-        .map((room) => ({
-        roomID: room,
-        name: playersInfo[rooms[room].roomOwner].name,
-        count: rooms[room].players.length
-    }));
-    listAllRooms.forEach((room) => console.log(`Создатель комнаты ${room.name}, число игроков ${room.count}`));
-    socket.emit('connect:getListAllRooms', listAllRooms);
-    let userName = 'Аноним';
-    socket.on('join', (roomID) => {
-        if (rooms[roomID].players.length === 4) {
-            console.log('Эта последний игрок');
-        }
+    socket.on('getRoomList', () => {
+        const listAllRooms = Object.keys(rooms)
+            .map((room) => ({
+            id: room,
+            creatorName: playersInfo[rooms[room].roomOwner].name,
+            countPlayers: rooms[room].players.length
+        }));
+        socket.emit('getRoomList', listAllRooms);
+    });
+    socket.on('room:join', (roomID) => {
         if (rooms[roomID].players.length > 4) {
             console.log('Эта комната набрана');
             return;
@@ -45,44 +43,57 @@ io.on('connection', (socket) => {
         if (playersInfo[socket.id])
             socket.leave(playersInfo[socket.id].room);
         socket.join(roomID);
+        if (rooms[roomID].players.length === 4) {
+            console.log('Эта последний игрок');
+            io.to(rooms[roomID].roomOwner).emit('join:last');
+            io.emit('join:stopAdding', roomID, true);
+        }
         playersInfo[socket.id] = {
             name: userName,
             room: roomID
         };
         rooms[roomID].players.push(socket.id);
-        console.log('Игроки в комнате: ', rooms[roomID].players);
-        const playerListNameByRoom = rooms[roomID].players
-            .map((playerID) => playersInfo[playerID].name).slice(1);
-        socket.emit('join:true', playersInfo[roomID].name, playerListNameByRoom, rooms[roomID].chat);
-        socket.broadcast.to(roomID).emit('join:newPlayer', playersInfo[socket.id].name);
+        const listNameOfPlayersByRoom = rooms[roomID].players
+            .map((playerID) => playersInfo[playerID].name);
+        socket.emit('join:true', listNameOfPlayersByRoom, rooms[roomID].chat);
+        socket.broadcast.to(roomID).emit('join:newPlayer', listNameOfPlayersByRoom);
         io.emit('changeCountPlayersByRoom', roomID, rooms[roomID].players.length);
     });
     socket.on('disconnect', () => {
         console.log(`user ID: ${socket.id} is disconnect`);
     });
-    socket.on('change-user-name', (newUserName) => {
-        userName = newUserName;
+    socket.on('setUserName', (name) => {
+        userName = name;
         console.log(userName);
     });
     socket.on('chat', (message) => {
         const currentRoom = playersInfo[socket.id].room;
+        console.log(message);
         if (currentRoom) {
             rooms[currentRoom].chat.push({ playerName: userName, message });
-            io.to(currentRoom).emit('add-new-message', userName, message);
+            io.to(currentRoom).emit('chat:new-message', { userName, message });
         }
         ;
     });
-    socket.on('room:create', (roomID) => {
+    socket.on('room:create', () => {
+        const roomID = socket.id.slice(0, 7);
         socket.join(roomID);
         playersInfo[socket.id] = {
             name: userName,
             room: roomID
         };
         rooms[roomID] = {
-            players: [roomID],
-            roomOwner: roomID,
+            players: [socket.id],
+            roomOwner: socket.id,
             chat: [],
         };
-        socket.broadcast.emit('room:create', roomID, userName);
+        socket.emit('room:create', [userName]);
+        const newRoom = {
+            id: roomID,
+            creatorName: userName,
+            countPlayers: 1
+        };
+        const countRooms = Object.keys(rooms).length;
+        socket.broadcast.emit('room:new-create', newRoom, countRooms);
     });
 });
