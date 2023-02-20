@@ -66,16 +66,24 @@ io.on('connection', (socket) => {
         if (playersInfo[socket.id])
             socket.leave(playersInfo[socket.id].room);
         socket.join(roomID);
-        if (rooms[roomID].players.length === 4) {
-            console.log('Эта последний игрок');
-            io.to(rooms[roomID].roomCreator).emit('join:last');
-            io.emit('join:stopAdding', roomID, true);
-        }
         playersInfo[socket.id] = {
             name: userName,
             room: roomID,
         };
         rooms[roomID].players.push(socket.id);
+        const creator = rooms[roomID].roomCreator;
+        const count = rooms[roomID].players.length;
+        switch (count) {
+            case 2:
+                io.to(creator).emit('room:ready');
+                break;
+            case 5:
+                io.to(creator).emit('room:full');
+                io.emit('join:stopAdding', roomID, true);
+                break;
+            default:
+                break;
+        }
         const listNameOfPlayersByRoom = rooms[roomID].players
             .map((playerID) => playersInfo[playerID].name);
         socket.emit('join:true', listNameOfPlayersByRoom, rooms[roomID].chat);
@@ -98,7 +106,8 @@ io.on('connection', (socket) => {
         const roomID = playersInfo[socket.id].room;
         socket.leave(roomID);
         playersInfo[socket.id].room = socket.id;
-        if (socket.id === rooms[roomID].roomCreator) {
+        const creator = rooms[roomID].roomCreator;
+        if (socket.id === creator) {
             console.log('Создатель распустил комнату: ', userName);
             delete rooms[roomID];
             io.emit('room:delete', roomID, Object.keys(rooms).length);
@@ -110,7 +119,19 @@ io.on('connection', (socket) => {
             const listNameOfPlayersByRoom = rooms[roomID].players
                 .map((playerID) => playersInfo[playerID].name);
             io.to(roomID).emit('room:updateListPlayers', listNameOfPlayersByRoom);
-            io.emit('changeCountPlayersByRoom', roomID, rooms[roomID].players.length);
+            const count = rooms[roomID].players.length;
+            io.emit('changeCountPlayersByRoom', roomID, count);
+            switch (count) {
+                case 4:
+                    io.to(creator).emit('room:ready');
+                    io.emit('join:stopAdding', roomID, false);
+                    break;
+                case 1:
+                    io.to(creator).emit('room:empty');
+                    break;
+                default:
+                    break;
+            }
         }
     });
     socket.on('room:leaveRoom', () => {
