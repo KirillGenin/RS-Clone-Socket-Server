@@ -3,9 +3,9 @@
   "name": "webpack_rss",
   "version": "1.0.0",
   "scripts": {
-    "dev-server": "npx nodemon ./src/index.ts",
+    "start": "npx nodemon ./src/index.ts",
     "lint": "eslint --fix . --ext .ts",
-    "build-server": "npx tsc"
+    "build": "npx tsc"
   },
   "browserslist": [
     "last 2 versions",
