@@ -40,7 +40,7 @@ const playersInfo: Players = {};
 /* ----------------- Socket ---------------- */
 io.on('connection', (socket: Socket) => {
   console.log(`a new user connected, ID: ${socket.id}`);
-  
+
   /* Имя текущего игрока */
   let userName = 'Аноним';
   /* Получение списка всех комнат */
@@ -49,13 +49,51 @@ io.on('connection', (socket: Socket) => {
     const listAllRooms: RoomList = Object.keys(rooms)
       .map((room) => ({
         id: room,
-        creatorName: playersInfo[rooms[room].roomOwner].name,
+        creatorName: playersInfo[rooms[room].roomCreator].name,
         countPlayers: rooms[room].players.length,
       }));
     socket.emit('getRoomList', listAllRooms);
   });
 
-  /* Игрок просоединился к комнате другого игрока */
+  /*  */
+  /* ------------------------------ Игрок создал свою комнату */
+  /*  */
+  socket.on('room:create', () => {
+    /* Чтобы была возможность эмитить отдельно создателям комнаты, */
+    /* id комнаты не должен быть равен id сокета создателя */
+    /* Просто отрезаем кусочек от id юзера и получаем id комнаты */
+    const roomID = socket.id.slice(0, 7);
+    /* Подключился к своей комнате */
+    socket.join(roomID);
+    /* Данные об игроке - имя и номер комнаты */
+    playersInfo[socket.id] = {
+      name: userName,
+      room: roomID,
+    };
+    /* Создание новой комнаты и добавление в нее игрока */
+    rooms[roomID] = {
+      deck: [],
+      playerDecks: {},
+      players: [socket.id],
+      currentPlayer: socket.id,
+      roomCreator: socket.id,
+      chat: [],
+    };
+    /* Отправляем игроку id его комнаты и его имя */
+    socket.emit('room:create', [userName]);
+    /* Сообщение другим игрокам о создании новой комнаты */
+    const newRoom = {
+      id: roomID,
+      creatorName: userName,
+      countPlayers: 1,
+    };
+    const countRooms = Object.keys(rooms).length;
+    socket.broadcast.emit('room:new-create', newRoom, countRooms);
+  });
+
+  /*  */
+  /* --------------------------- Игрок просоединился к комнате другого игрока */
+  /*  */
   socket.on('room:join', (roomID: string) => {
     /* Проверка, можно ли присоединиться к комнате, или она уже полная */
     if (rooms[roomID].players.length > 4) {
@@ -73,7 +111,7 @@ io.on('connection', (socket: Socket) => {
     if (rooms[roomID].players.length === 4) {
       console.log('Эта последний игрок');
       /* Оповещение владельца комнаты */
-      io.to(rooms[roomID].roomOwner).emit('join:last');
+      io.to(rooms[roomID].roomCreator).emit('join:last');
       /* Оповещение всех */
       io.emit('join:stopAdding', roomID, true);
     }
@@ -96,17 +134,18 @@ io.on('connection', (socket: Socket) => {
     io.emit('changeCountPlayersByRoom', roomID, rooms[roomID].players.length);
   });
 
-  socket.on('disconnect', () => {
-    console.log(`user ID: ${socket.id} is disconnect`);
-  });
-
-  /* Установка имени игрока */
+  /*  */
+  /* -------------------------------- Установка имени игрока */
+  /*  */
   socket.on('setUserName', (name: string) => {
     userName = name;
     console.log('Получено новое имя: ', userName);
   });
 
-  socket.on('chat', (message: string) => {
+  /*  */
+  /* ------------------------------------ Приходит сообщение в чат */
+  /*  */
+  socket.on('chat:send', (message: string) => {
     const currentRoom = playersInfo[socket.id].room;
     console.log(`Игрок ${userName} написал в чат: ${message}`);
     if (currentRoom) {
@@ -115,34 +154,53 @@ io.on('connection', (socket: Socket) => {
     }
   });
 
-  /* Игрок создал свою комнату */
-  socket.on('room:create', () => {
-    /* Чтобы была возможность эмитить отдельно создателям комнаты, */
-    /* id комнаты не должен быть равен id сокета создателя */
-    /* Просто отрезаем кусочек от id юзера и получаем id комнаты */
-    const roomID = socket.id.slice(0, 7);
-    /* Подключился к своей комнате */
-    socket.join(roomID);
-    /* Данные об игроке - имя и номер комнаты */
-    playersInfo[socket.id] = {
-      name: userName,
-      room: roomID,
-    };
-    /* Создание новой комнаты и добавление в нее игрока */
-    rooms[roomID] = {
-      players: [socket.id],
-      roomOwner: socket.id,
-      chat: [],
-    };
-    /* Отправляем игроку id его комнаты и его имя */
-    socket.emit('room:create', [userName]);
-    /* Сообщение другим игрокам о создании новой комнаты */
-    const newRoom = {
-      id: roomID,
-      creatorName: userName,
-      countPlayers: 1,
-    };
-    const countRooms = Object.keys(rooms).length;
-    socket.broadcast.emit('room:new-create', newRoom, countRooms);
+  /*  */
+  /* ------------------------------------- Игрок выходит из комнаты */
+  /*  */
+  socket.on('room:leave', () => {
+    /* Определяем ID комнаты, в которой находится игрок */
+    const roomID = playersInfo[socket.id].room;
+    /* Игрок покидает комнату и меняет запись на свою комнату */
+    socket.leave(roomID);
+    playersInfo[socket.id].room = socket.id;
+    /* Определяем роль игрока - создатель комнаты или участник */
+    if (socket.id === rooms[roomID].roomCreator) {
+      /* Игрок является создателем комнаты */
+      console.log('Создатель распустил комнату: ', userName);
+      delete rooms[roomID]; /* Удалили комнату из модели */
+      /* Эмитим событие для удаления комнаты из списка комнат*/
+      /* и сообщаем новое кол-во комнат */
+      io.emit('room:delete', roomID, Object.keys(rooms).length);
+      /* Оповестить всех оставшихся в комнате игроков о том, что комната распущена */
+      /* Получат только другие участники, т.к. создатель уже покинул комнату */
+      io.to(roomID).emit('room:destroy', userName);
+    } else {
+      console.log('Комнату покинул участник');
+      /* Удаление данных об игроке из комнаты в объекте rooms */
+      rooms[roomID].players = rooms[roomID].players.filter((id) => id !== socket.id);
+      /* Отправляем оставшимся игрокам в комнате новый список участников */
+      const listNameOfPlayersByRoom = rooms[roomID].players
+        .map((playerID) => playersInfo[playerID].name);
+      io.to(roomID).emit('room:updateListPlayers', listNameOfPlayersByRoom);
+      /* Обновляем у всех число игроков в комнате, которую покинул игрок */
+      io.emit('changeCountPlayersByRoom', roomID, rooms[roomID].players.length);
+    }
+  });
+
+  /*  */
+  /* Участник полностью покидает комнату, распущенную создателем */
+  /*  */
+  socket.on('room:leaveRoom', () => {
+    /* Отключается от комнаты */
+    socket.leave(playersInfo[socket.id].room);
+    /* Замена комнаты в модели игрока */
+    playersInfo[socket.id].room = socket.id;
+  });
+
+  /*  */
+  /* --------------------- Соединение потеряно */
+  /*  */
+  socket.on('disconnect', () => {
+    console.log(`user ID: ${socket.id} is disconnect`);
   });
 });
