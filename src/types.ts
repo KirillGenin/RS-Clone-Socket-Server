@@ -4,13 +4,13 @@ export type MessageToChat = {
 };
 
 export type Room = {
-  deck?: string[], // Общая колода
+  deck: string[], // Общая колода
   players: string[], // Список игроков в комнате
-  playerDecks?: { // Колоды карт для каждого игрока
+  playerDecks: { // Колоды карт для каждого игрока
     [key: string]: string[]
   },
-  currentPlayer?: string, // Текущий игрок
-  roomOwner: string, // ID владельца комнаты
+  currentPlayer: string, // Текущий игрок
+  roomCreator: string, // ID владельца комнаты
   chat: MessageToChat[] // Чат комнаты
 };
 
