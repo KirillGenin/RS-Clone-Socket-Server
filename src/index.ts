@@ -36,7 +36,6 @@ const rooms: Rooms = {};
 /* Игроки: Socket ID игрока - Имя и Номер комнаты */
 const playersInfo: Players = {};
 
-
 /* ----------------- Socket ---------------- */
 io.on('connection', (socket: Socket) => {
   console.log(`a new user connected, ID: ${socket.id}`);
@@ -168,7 +167,7 @@ io.on('connection', (socket: Socket) => {
       /* Игрок является создателем комнаты */
       console.log('Создатель распустил комнату: ', userName);
       delete rooms[roomID]; /* Удалили комнату из модели */
-      /* Эмитим событие для удаления комнаты из списка комнат*/
+      /* Эмитим событие для удаления комнаты из списка комнат */
       /* и сообщаем новое кол-во комнат */
       io.emit('room:delete', roomID, Object.keys(rooms).length);
       /* Оповестить всех оставшихся в комнате игроков о том, что комната распущена */
