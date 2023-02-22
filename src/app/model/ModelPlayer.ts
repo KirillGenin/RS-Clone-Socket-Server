@@ -1,7 +1,7 @@
 import { Players } from '../../types';
 
 class ModelPlayer {
-  players: Players;
+  private players: Players;
 
   constructor() {
     this.players = {};
@@ -33,6 +33,11 @@ class ModelPlayer {
   /* Присваивание новой комнаты игроку */
   public setPlayerRoomId(id: string, room: string) {
     this.players[id].room = room;
+  }
+
+  /* Удаление игрока */
+  public removePlayer(id: string) {
+    delete this.players[id];
   }
 }
 
