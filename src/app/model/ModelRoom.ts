@@ -1,7 +1,7 @@
 import { Rooms, MessageToChat } from '../../types';
 
 class ModelRoom {
-  rooms: Rooms;
+  private rooms: Rooms;
 
   constructor() {
     this.rooms = {};
@@ -21,15 +21,15 @@ class ModelRoom {
       currentPlayer: id,
       roomCreator: id,
       chat: [],
+      isPlay: false
     };
     /* Возвращаем id новой комнаты */
     return room;
   }
 
   /* Получение имени создателя комнаты */
-  public getRoomCreatorID(id: string) {
-    console.log('Получаем ID создателя');
-    return this.rooms[id].roomCreator;
+  public getRoomCreatorID(room: string) {
+    return this.rooms[room].roomCreator;
   }
 
   /* Получение размера комнаты */
@@ -76,6 +76,11 @@ class ModelRoom {
   /* Записать сообщение в чат */
   public pushMessageToChat(room: string, message: MessageToChat) {
     this.rooms[room].chat.push(message);
+  }
+
+  /* Проверить статус игры - начата или нет */
+  public isPlay(room: string) {
+    return this.rooms[room].isPlay;
   }
 }
 
