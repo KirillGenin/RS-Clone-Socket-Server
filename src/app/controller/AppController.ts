@@ -159,6 +159,61 @@ class AppController {
       /*  */
       socket.on('disconnect', () => {
         console.log(`user ID: ${socket.id} is disconnect`);
+        /* Определяем ID комнаты, в которой находился игрок */
+        const room = this.model.players.getPlayerRoomId(socket.id);
+        /* Если игрок не присоединялся и не создавал свою комнату */
+        /* то просто удаляем запись о нем и завершаем функцию */
+        if (!this.model.rooms.getListAllRooms().includes(room)) {
+          /* Удаляем запись об игроке из модели */
+          this.model.players.removePlayer(socket.id);
+          return;
+        }
+        /* Игрок покидает комнату */
+        socket.leave(room);
+        /* Проверяем, началась ли игра */
+        if (!this.model.rooms.isPlay(room)) { /* Если игра еще не началась */
+          /* Определяем создателя комнаты */
+          const creator = this.model.rooms.getRoomCreatorID(room);
+          /* Определяем роль игрока - создатель комнаты или участник */
+          if (socket.id === creator) { /* Игрок является создателем комнаты */
+            console.log('Создатель disconnect');
+            this.model.rooms.removeRoom(room); /* Удалили комнату из модели */
+            /* Эмитим событие для удаления комнаты из списка комнат */
+            /* и сообщаем новое кол-во комнат */
+            this.io.emit('room:delete', room, this.model.rooms.getCountAllRooms());
+            /* Оповестить всех оставшихся в комнате игроков о том, что комната распущена */
+            /* Получат только другие участники, т.к. создатель уже покинул комнату */
+            this.io.to(room).emit('room:destroy', this.model.players.getPlayerName(socket.id));
+          } else {
+            console.log('Участник disconnect');
+            /* Удаление данных об игроке из комнаты в объекте rooms */
+            this.model.rooms.removePlayer(room, socket.id);
+            /* Отправляем оставшимся игрокам в комнате новый список участников */
+            const players = this.model.getListNameOfPlayersByRoom(room);
+            this.io.to(room).emit('room:updateListPlayers', players);
+            /* Отправляем всем новое кол-во игроков в этой комнате */
+            this.io.emit('changeCountPlayersByRoom', room, this.model.rooms.getSizeRoom(room));
+            /* Проверяем сколько осталось игроков, и меняем статус комнаты */
+            switch (this.model.rooms.getSizeRoom(room)) {
+              case 4:
+                this.io.to(creator).emit('room:ready');
+                this.io.emit('join:stopAdding', room, false); /* toggle кнопки JOIN в списке комнат */
+                break;
+              case 1:
+                this.io.to(creator).emit('room:empty');
+                break;
+              default:
+                break;
+            }
+          }
+          /* Удаляем запись об игроке из модели */
+          this.model.players.removePlayer(socket.id);
+        }
+      });
+
+      /*  */
+      socket.on('makeDisconnect', () => {
+        socket.disconnect();
       });
     });
   }
