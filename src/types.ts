@@ -11,7 +11,8 @@ export interface Room {
   },
   currentPlayer: string, // Текущий игрок
   roomCreator: string, // ID владельца комнаты
-  chat: MessageToChat[] // Чат комнаты
+  chat: MessageToChat[], // Чат комнаты
+  isPlay: boolean // Статус игры
 }
 
 export interface Rooms {
