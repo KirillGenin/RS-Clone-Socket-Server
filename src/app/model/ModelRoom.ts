@@ -21,7 +21,7 @@ class ModelRoom {
       currentPlayer: id,
       roomCreator: id,
       chat: [],
-      isPlay: false
+      isPlay: false,
     };
     /* Возвращаем id новой комнаты */
     return room;
