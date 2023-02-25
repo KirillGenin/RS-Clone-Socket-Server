@@ -4,11 +4,7 @@ export type MessageToChat = {
 };
 
 export interface Room {
-  deck: string[], // Общая колода
   players: string[], // Список игроков в комнате
-  playerDecks: { // Колоды карт для каждого игрока - ID игрока: колода
-    [key: string]: string[]
-  },
   currentPlayer: string, // Текущий игрок
   roomCreator: string, // ID владельца комнаты
   chat: MessageToChat[], // Чат комнаты
@@ -35,3 +31,7 @@ export type RoomOnList = {
 };
 
 export type RoomList = RoomOnList[];
+
+export interface Decks {
+  [key: string]: string[],
+}

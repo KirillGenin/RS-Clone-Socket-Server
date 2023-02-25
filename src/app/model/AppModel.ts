@@ -1,15 +1,19 @@
 import { RoomList } from '../../types';
 import ModelPlayer from './ModelPlayer';
 import ModelRoom from './ModelRoom';
+import ModelDeck from './ModelDeck';
 
 class AppModel {
   players: ModelPlayer;
 
   rooms: ModelRoom;
 
+  decks: ModelDeck;
+
   constructor() {
     this.players = new ModelPlayer();
     this.rooms = new ModelRoom();
+    this.decks = new ModelDeck();
   }
 
   /* Получение списка всех комнат */

@@ -15,8 +15,6 @@ class ModelRoom {
     const room = id.slice(0, 7);
     /* Создаем запись о новой комнате */
     this.rooms[room] = {
-      deck: [],
-      playerDecks: {},
       players: [id],
       currentPlayer: id,
       roomCreator: id,

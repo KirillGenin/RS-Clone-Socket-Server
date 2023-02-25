@@ -28,7 +28,7 @@ class AppController {
 
       /* ----------------------------------------- Получение списка всех комнат */
       socket.on('getRoomList', () => {
-        socket.emit('getRoomList', this.model.getRoomList(), this.model);
+        socket.emit('getRoomList', this.model.getRoomList());
       });
 
       /* ------------------------------------------- Игрок создал свою комнату */
@@ -214,6 +214,20 @@ class AppController {
       /*  */
       socket.on('makeDisconnect', () => {
         socket.disconnect();
+      });
+
+      /*  */
+      /* ---------------------- ИГРА -------------------- */
+      /*  */
+
+      /* -------------------- Создание колод для комнаты: общая и для каждого игрока */
+      socket.on('deck:create', () => {
+        /* Определяем id комнаты */
+        const room = this.model.players.getPlayerRoomId(socket.id);
+        /* Получаем список всех игроков в комнате */
+        const players = this.model.rooms.getListPlayersIDByRoom(room);
+        /* Формируем колоды */
+        this.model.decks.createDecks(room, players);
       });
     });
   }
