@@ -229,6 +229,53 @@ class AppController {
         /* Формируем колоды */
         this.model.decks.createDecks(room, players);
       });
+
+      /* --------------------- Переход игроков на страницу игры с рендерингом стола */
+      /*  */
+      socket.on('game:start', () => {
+        /* Определяем id комнаты */
+        const room = this.model.players.getPlayerRoomId(socket.id);
+        /* Оповещаем всех игроков в комнате о начале игры, вызывает смену view на game */
+        this.io.to(room).emit('game:init');
+      });
+
+      /* --------- Проверяем, находится ли игрок в комнате или была перезагружена страница */
+      /* В зависимости от этого рендерим стол или перекидываем в аккаунт */
+      socket.on('player:checkInGame', () => {
+        /* Определяем id комнаты */
+        const room = this.model.players.getPlayerRoomId(socket.id);
+        /* Если игрок находится в игровой комнате, эмитим true, если нет - false */
+        if (this.model.rooms.getListAllRooms().includes(room)) {
+          socket.emit('player:checkInGame', true);
+        } else socket.emit('player:checkInGame', false);
+      });
+
+      /* ---------------------- Получение колоды карт и имени текущего игрока */
+      /*  */
+      socket.on('game:getDeckAndNameOfCurrentPlayer', () => {
+        const deck = this.model.decks.getDeckOfPlayer(socket.id);
+        const name = this.model.players.getPlayerName(socket.id);
+        socket.emit('game:getDeckAndNameOfCurrentPlayer', deck, name);
+      });
+
+      /* ---------------------- Получение списка имен противников */
+      /*  */
+      socket.on('game:getListOfEnemyNames', () => {
+        /* Определяем id комнаты */
+        const room = this.model.players.getPlayerRoomId(socket.id);
+        /* Получаем список id игроков в комнате */
+        const players = this.model.rooms.getListPlayersIDByRoom(room);
+        /* Определяем позицию текущего игрока в списке, */
+        /* чтобы создать индивидуальный список противников */
+        const index = players.indexOf(socket.id);
+        /* Создаем массив из имен игроков */
+        const names = players.map((player) => this.model.players.getPlayerName(player));
+        /* Нарезаем список противников для текущего игрока по принципу: */
+        /* все игроки после него + все игроки до него, по порядку */
+        const opponents = names.slice(index + 1).concat(names.slice(0, index));
+        /* Отправляем */
+        socket.emit('game:getListOfEnemyNames', opponents);
+      });
     });
   }
 }

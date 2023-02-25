@@ -41,7 +41,7 @@ class ModelDeck {
     this.noCards = ['no1', 'no2', 'no3', 'no4', 'no5'];
     this.shuffleCards = ['shuffle1', 'shuffle2', 'shuffle3', 'shuffle4'];
     this.tacocatCards = ['tacocat1', 'tacocat2', 'tacocat3', 'tacocat4'];
-    this.borodacatCards = ['borodacat1', 'borodacat2', 'borodaca3', 'borodacat4'];
+    this.borodacatCards = ['borodacat1', 'borodacat2', 'borodacat3', 'borodacat4'];
     this.rainbowcatCards = ['rainbowcat1', 'rainbowcat2', 'rainbowcat3', 'rainbowcat4'];
     this.watermelonCards = ['watermelon1', 'watermelon2', 'watermelon3', 'watermelon4'];
     this.potatoCards = ['potato1', 'potato2', 'potato3', 'potato4'];
@@ -115,6 +115,26 @@ class ModelDeck {
   /* Удалить колоду комнаты */
   public removeRoomDeck(id: string) {
     delete this.roomDecks[id];
+  }
+
+  /* Получить колоду игрока */
+  public getDeckOfPlayer(id: string) {
+    return this.playerDecks[id];
+  }
+
+  /* Получить размер колоды игрока */
+  public getSizeDeckOfPlayer(id: string) {
+    return this.playerDecks[id].length;
+  }
+
+  /* Получить колоду комнаты */
+  public getDeckOfRoom(room: string) {
+    return this.roomDecks[room];
+  }
+
+  /* Получить размер колоды комнаты */
+  public getSizeDeckOfRoom(room: string) {
+    return this.roomDecks[room].length;
   }
 }
 
