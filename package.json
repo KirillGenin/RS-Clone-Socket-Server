@@ -2,8 +2,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "npx nodemon ./src/index.ts",
-    "lint": "eslint --fix . --ext .ts",
-    "build": "set NODE_ENV=production&&webpack"
+    "lint": "eslint --fix . --ext .ts"
   },
   "browserslist": [
     "last 2 versions",
