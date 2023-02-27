@@ -23,6 +23,7 @@ class AppModel {
         id: room,
         creatorName: this.players.getPlayerName(this.rooms.getRoomCreatorID(room)),
         countPlayers: this.rooms.getSizeRoom(room),
+        isPlay: this.rooms.isPlay(room),
       }));
   }
 
