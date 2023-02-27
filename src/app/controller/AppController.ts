@@ -1,7 +1,7 @@
 import { Server, Socket } from 'socket.io';
 // @ts-ignore
 import AppModel from '../model/AppModel';
-import { RoomOnList } from '../../types';
+import { RoomOnList, RoomStatus, Tips, TipsColor } from '../../types';
 
 class AppController {
   private io: Server;
@@ -47,6 +47,7 @@ class AppController {
           id: room,
           creatorName: this.model.players.getPlayerName(socket.id),
           countPlayers: 1,
+          isPlay: false,
         };
         const countRooms = this.model.rooms.getCountAllRooms();
         socket.broadcast.emit('room:new-create', newRoom, countRooms);
@@ -76,7 +77,7 @@ class AppController {
             break;
           case 5:
             this.io.to(creator).emit('room:full');
-            this.io.emit('join:stopAdding', room, true); /* toggle кнопки JOIN в списке комнат */
+            this.io.emit('join:status', room, RoomStatus.Full); /* toggle кнопки JOIN в списке комнат */
             break;
           default:
             break;
@@ -135,7 +136,7 @@ class AppController {
           switch (this.model.rooms.getSizeRoom(room)) {
             case 4:
               this.io.to(creator).emit('room:ready');
-              this.io.emit('join:stopAdding', room, false); /* toggle кнопки JOIN в списке комнат */
+              this.io.emit('join:status', room, RoomStatus.Empty); /* toggle кнопки JOIN в списке комнат */
               break;
             case 1:
               this.io.to(creator).emit('room:empty');
@@ -197,7 +198,7 @@ class AppController {
             switch (this.model.rooms.getSizeRoom(room)) {
               case 4:
                 this.io.to(creator).emit('room:ready');
-                this.io.emit('join:stopAdding', room, false); /* toggle кнопки JOIN в списке комнат */
+                this.io.emit('join:status', room, RoomStatus.Empty); /* toggle кнопки JOIN в списке комнат */
                 break;
               case 1:
                 this.io.to(creator).emit('room:empty');
@@ -206,9 +207,28 @@ class AppController {
                 break;
             }
           }
-          /* Удаляем запись об игроке из модели */
-          this.model.players.removePlayer(socket.id);
+        } else {
+          /* Удаление данных об игроке из комнаты в объекте rooms */
+          this.model.rooms.removePlayer(room, socket.id);
+          /* Задизеблить игрока за игровым столом */
+          /* Удалить случайного взрывного котика из колоды комнаты */
+          /* Сообщить в подсказки всем в комнате что игрол вышел и проиграл */
+          /* Удалить данные об игроке из модели */
+          /* Если  */
+          const countPlayers = this.model.rooms.getSizeRoom(room);
+          /* Если за столом остался один игрок: */
+          /* - сообщить ему о победе и удалить комнату из модели */
+          /* Если за столом пусто, то удаляем комнату из списка комнат */
+          if (countPlayers === 0) {
+            /* Удаляем комнату из модели */
+            this.model.rooms.removeRoom(room);
+            /* Удаляем комнату из списка комнат */
+            /* и сообщаем новое кол-во комнат */
+            this.io.emit('room:delete', room, this.model.rooms.getCountAllRooms());
+          }
         }
+        /* Удаляем запись об игроке из модели */
+        this.model.players.removePlayer(socket.id);
       });
 
       /*  */
@@ -235,8 +255,13 @@ class AppController {
       socket.on('game:start', () => {
         /* Определяем id комнаты */
         const room = this.model.players.getPlayerRoomId(socket.id);
+        /* Изменяем статус комнаты на игру */
+        this.model.rooms.setStatusPlay(room);
+        /* Определяем случайный образом кто первый ходит */
+        this.model.rooms.initCurrentPlayer(room);
         /* Оповещаем всех игроков в комнате о начале игры, вызывает смену view на game */
         this.io.to(room).emit('game:init');
+        this.io.emit('join:status', room, RoomStatus.Play);
       });
 
       /* --------- Проверяем, находится ли игрок в комнате или была перезагружена страница */
@@ -275,6 +300,25 @@ class AppController {
         const opponents = names.slice(index + 1).concat(names.slice(0, index));
         /* Отправляем */
         socket.emit('game:getListOfEnemyNames', opponents);
+      });
+
+      /* ---------- Получение ника игрока, чей сейчас ход */
+      /*  */
+      socket.on('game:getCurrentPlayer', () => {
+        /* Определяем id комнаты */
+        const room = this.model.players.getPlayerRoomId(socket.id);
+        /* Получаем ID текущего игрока */
+        const currentPlayerID = this.model.rooms.getCurrentPlayer(room);
+        const currentPlayerName = this.model.players.getPlayerName(currentPlayerID);
+        /* Проверяем является ли игро к первым ходящим */
+        if (socket.id === currentPlayerID) { /* Ходит текущий игрока */
+          socket.emit('game:myMove');
+          socket.emit('tips', Tips[0], TipsColor.White);
+        } else { /* Ходит оппонент */
+          /* Отправляем ник противника, чей ход */
+          socket.emit('game:setCurrentOpponent', currentPlayerName);
+          socket.emit('tips', `${Tips[1]} ${currentPlayerName}`, TipsColor.White);
+        }
       });
     });
   }
