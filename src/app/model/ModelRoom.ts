@@ -3,8 +3,11 @@ import { Rooms, MessageToChat } from '../../types';
 class ModelRoom {
   private rooms: Rooms;
 
+  private maxCountOfPLlayers: number;
+
   constructor() {
     this.rooms = {};
+    this.maxCountOfPLlayers = 5;
   }
 
   /* Создание новой комнаты */
@@ -76,9 +79,43 @@ class ModelRoom {
     this.rooms[room].chat.push(message);
   }
 
+  /* Установить статус "игры началась" для комнаты */
+  public setStatusPlay(room: string) {
+    this.rooms[room].isPlay = true;
+  }
+
   /* Проверить статус игры - начата или нет */
   public isPlay(room: string) {
     return this.rooms[room].isPlay;
+  }
+
+  /* Получить значение максимального кол-ва игроков в комнате */
+  public getMaxCountOfPLlayers() {
+    return this.maxCountOfPLlayers;
+  }
+
+  /* Случайно определяем первого кто ходит */
+  public initCurrentPlayer(room: string) {
+    const index = Math.floor(Math.random() * this.rooms[room].players.length);
+    this.rooms[room].currentPlayer = this.rooms[room].players[index];
+    console.log('Первым ходит игрок номер: ', index, ' с iD: ', this.rooms[room].currentPlayer);
+  }
+
+  /* Получить id текущего игрока */
+  public getCurrentPlayer(room: string) {
+    return this.rooms[room].currentPlayer;
+  }
+
+  /* Установить следующего в списке игрока, чей сейчас ход */
+  public setNextCurrentPlayer(room: string) {
+    /* Список игроков в комнате */
+    const { players } = this.rooms[room];
+    /* Определяем позицию текущего ходока в списке */
+    const index = players.indexOf(this.rooms[room].currentPlayer);
+    /* Назначаем ходящим следующего игрока в списке. */
+    /* Если предыдущий был последним, то текущим становится нулевой в списке */
+    this.rooms[room].currentPlayer = (index + 1) === players.length
+      ? players[0] : players[index + 1];
   }
 }
 
